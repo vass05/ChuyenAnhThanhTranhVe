@@ -1,0 +1,7 @@
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+
+python-interpreter-path = "C:/Users/PC ASUS/miniconda3/python.exe"
+search-path = [".", "src"]

@@ -9,7 +9,7 @@ DoD:
 
 import numpy as np
 
-from .convolution import convolve1d_axis, convolve2d
+from .convolution import convolve1d_axis, convolve2d, padding_2d
 
 
 def get_gaussian_kernel_1d(size: int, sigma: float) -> np.ndarray:
@@ -108,3 +108,105 @@ def gaussian_blur(
     if is_uint8:
         return np.clip(np.round(blurred), 0, 255).astype(np.uint8)
     return blurred.astype(np.float32)
+
+
+def bilateral_filter(
+    image: np.ndarray,
+    d: int = 7,
+    sigma_s: float = 7.0,
+    sigma_r: float = 0.1,
+    mode: str = "reflect"
+) -> np.ndarray:
+    """
+    Bộ lọc bảo toàn biên (Bilateral Filter from Scratch).
+    
+    Phương pháp Vector hóa ma trận thuần (Pure NumPy Vectorization):
+        - Không duyệt từng pixel (O(H*W)).
+        - Duyệt qua các độ lệch không gian lân cận (dy, dx) thuộc cửa sổ d x d.
+        - Trọng số không gian G_sigma_s(dist):
+            ws = exp(-(dy^2 + dx^2) / (2 * sigma_s^2))
+        - Trọng số màu sắc / cường độ sáng G_sigma_r(dist_color):
+            wr = exp(-||I(p) - I(q)||^2 / (2 * sigma_r^2))
+        - Nhân chập hai trọng số cục bộ w = ws * wr để làm phẳng khối màu
+          mà vẫn giữ nguyên các vách tương phản cao (cạnh biên).
+          
+    Tham số:
+        image: Mảng ảnh 2D (H, W) hoặc 3D (H, W, C), dải [0.0, 1.0] hoặc uint8 [0, 255].
+        d: Đường kính vùng lân cận (số lẻ, mặc định 7).
+        sigma_s: Độ lệch chuẩn không gian (Spatial Sigma, mặc định 7.0).
+        sigma_r: Độ lệch chuẩn màu sắc/độ sáng (Range Sigma, mặc định 0.1 cho ảnh [0, 1]).
+        mode: Kiểu đệm biên ('reflect', 'edge').
+        
+    Trả về:
+        np.ndarray: Ảnh đã được làm mịn khối màu nhưng giữ sắc nét cạnh biên.
+    """
+    if not isinstance(image, np.ndarray):
+        image = np.asarray(image)
+
+    if d % 2 == 0 or d < 1:
+        raise ValueError(f"Đường kính d phải là số nguyên lẻ, nhận được {d}")
+
+    is_uint8 = image.dtype == np.uint8
+    img_float = image.astype(np.float32, copy=False)
+
+    # Nếu đầu vào là uint8 thang 0..255, scale về [0.0, 1.0] để tính toán
+    if is_uint8:
+        img_norm = img_float / 255.0
+        # Nếu sigma_r lớn hơn 1.0 (ví dụ truyền theo thang 0..255), tự động chuẩn hóa
+        effective_sigma_r = sigma_r / 255.0 if sigma_r > 1.0 else sigma_r
+    else:
+        img_norm = img_float
+        effective_sigma_r = sigma_r
+
+    radius = d // 2
+    H, W = img_norm.shape[:2]
+
+    # Đệm biên ảnh theo bán kính lân cận
+    padded = padding_2d(img_norm, radius, mode=mode)
+
+    # Khởi tạo bộ tích lũy tử số và mẫu số
+    numerator = np.zeros_like(img_norm, dtype=np.float32)
+    denominator = np.zeros((H, W), dtype=np.float32)
+
+    two_sigma_s_sq = 2.0 * (sigma_s ** 2)
+    two_sigma_r_sq = 2.0 * (effective_sigma_r ** 2)
+
+    # Lặp qua các tọa độ lệch lân cận trong cửa sổ d x d
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            # 1. Trọng số khoảng cách không gian (Spatial Weight)
+            spatial_dist_sq = float(dy ** 2 + dx ** 2)
+            ws = np.exp(-spatial_dist_sq / two_sigma_s_sq)
+
+            # Lát cắt ảnh dịch chuyển tại độ lệch (dy, dx)
+            shifted = padded[radius + dy : radius + dy + H, radius + dx : radius + dx + W]
+
+            # 2. Trọng số khoảng cách màu sắc/độ sáng (Range Weight)
+            if img_norm.ndim == 2:
+                intensity_diff_sq = (img_norm - shifted) ** 2
+            else:
+                # Ảnh màu 3D RGB: tổng bình phương chênh lệch màu qua các kênh
+                intensity_diff_sq = np.sum((img_norm - shifted) ** 2, axis=-1)
+
+            wr = np.exp(-intensity_diff_sq / two_sigma_r_sq)
+
+            # 3. Kết hợp hai trọng số cục bộ
+            w = ws * wr  # Shape: (H, W)
+
+            # Tích lũy tử số và mẫu số song song trên toàn mảng
+            if img_norm.ndim == 2:
+                numerator += w * shifted
+            else:
+                numerator += w[..., np.newaxis] * shifted
+
+            denominator += w
+
+    # Chuẩn hóa trọng số
+    if img_norm.ndim == 2:
+        output = numerator / (denominator + 1e-8)
+    else:
+        output = numerator / (denominator[..., np.newaxis] + 1e-8)
+
+    if is_uint8:
+        return np.clip(np.round(output * 255.0), 0, 255).astype(np.uint8)
+    return output.astype(np.float32)

@@ -5,9 +5,8 @@ DoD:
 - Sử dụng ma trận Sobel Kx, Ky.
 - Tính đạo hàm qua tích chập convolve2d.
 - Tính ma trận độ lớn gradient G = sqrt(Gx^2 + Gy^2).
-- Phân ngưỡng tạo mask nét vẽ đen trắng (nền trắng nét đen).
+- Phân ngưỡng tạo mask nét vẽ đen trắng (hỗ trợ cả nhị phân và khử răng cưa mượt mà).
 """
-
 
 import numpy as np
 
@@ -78,7 +77,8 @@ def compute_gradients(image: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.nda
 def create_edge_mask(
     magnitude: np.ndarray,
     threshold: float = 0.15,
-    invert: bool = True
+    invert: bool = True,
+    smooth: bool = False
 ) -> np.ndarray:
     """
     Phân ngưỡng ma trận độ lớn gradient để tạo mask nét vẽ đen trắng.
@@ -87,19 +87,32 @@ def create_edge_mask(
         magnitude: Ma trận độ lớn gradient (H, W) trong [0.0, 1.0].
         threshold: Ngưỡng phân tách biên (mặc định 0.15).
         invert:
-            - True: Nền trắng (1.0), nét vẽ đen (0.0) -> phục vụ hoạt hình & phác thảo.
-            - False: Nền đen (0.0), nét vẽ trắng (1.0).
+            - True: Nền trắng, nét vẽ mực đen -> phục vụ hoạt hình, phác thảo & in ấn.
+            - False: Nền đen, nét vẽ sáng trắng.
+        smooth:
+            - False: Phân ngưỡng nhị phân cứng {0.0, 1.0}.
+            - True: Phân ngưỡng mượt khử răng cưa (Anti-aliased Line Art), nét vẽ thanh thoát.
             
     Trả về:
-        np.ndarray: Ma trận mask nhị phân 2D kiểu float32 {0.0, 1.0}.
+        np.ndarray: Ma trận mask 2D kiểu float32.
     """
-    is_edge = magnitude >= threshold
+    if not smooth:
+        is_edge = magnitude >= threshold
+        if invert:
+            return np.where(is_edge, 0.0, 1.0).astype(np.float32)
+        return np.where(is_edge, 1.0, 0.0).astype(np.float32)
+
+    # Chế độ khử răng cưa mượt mà (Anti-aliased Smoothstep)
+    t_low = threshold * 0.70
+    t_high = threshold * 1.30
+    edge_str = np.clip((magnitude - t_low) / max(t_high - t_low, 1e-4), 0.0, 1.0)
+    edge_str = np.power(edge_str, 1.2)
 
     if invert:
-        # Nền trắng (1.0), nét đen (0.0)
-        mask = np.where(is_edge, 0.0, 1.0).astype(np.float32)
+        # Nền trắng (1.0), nét mực đen đậm (0.0 đến 1.0)
+        mask = 1.0 - edge_str * 0.95
     else:
-        # Nền đen (0.0), nét trắng (1.0)
-        mask = np.where(is_edge, 1.0, 0.0).astype(np.float32)
+        # Nền đen (0.0), nét vẽ sáng trắng (0.0 đến 1.0)
+        mask = edge_str * 0.95
 
-    return mask
+    return mask.astype(np.float32)

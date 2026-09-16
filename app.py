@@ -17,6 +17,7 @@ from PIL import Image
 from src.cartoon import cartoonify
 from src.color_adjust import apply_tone_adjustments
 from src.edges import compute_gradients, create_edge_mask
+from src.filters import gaussian_blur
 from src.grayscale import to_grayscale
 from src.io_handler import to_float32, to_uint8
 from src.sketch import color_pencil_sketch, pencil_sketch
@@ -52,6 +53,7 @@ TRANSLATIONS = {
         "water_edge": "Độ đậm nét cọ viền:",
         "water_sat": "Độ rực rỡ màu nước:",
         "edge_thresh_sobel": "Ngưỡng nhận diện viền:",
+        "smooth_edge": "Nét vẽ khử răng cưa mượt mà",
         "invert_mask": "Nền trắng nét đen",
         "tone_header": "Độ sáng & Tương phản",
         "brightness": "Độ sáng:",
@@ -93,6 +95,7 @@ TRANSLATIONS = {
         "water_edge": "Brush Stroke Intensity:",
         "water_sat": "Watercolor Vibrancy:",
         "edge_thresh_sobel": "Edge Threshold:",
+        "smooth_edge": "Smooth Anti-Aliased Lines",
         "invert_mask": "White background black ink",
         "tone_header": "Brightness & Contrast",
         "brightness": "Brightness:",
@@ -372,12 +375,13 @@ def main():
     blur_sigma = 10.0
     blur_size = 21
     num_levels = 6
-    edge_thresh = 0.08
+    edge_thresh = 0.10
     bilat_d = 7
     bilat_sigma_s = 7.0
     bilat_sigma_r = 0.12
-    water_edge_str = 0.50
-    water_sat = 1.30
+    water_edge_str = 0.45
+    water_sat = 1.35
+    smooth_edge = True
     invert_mask = True
 
     if current_style == "style_cartoon":
@@ -392,8 +396,8 @@ def main():
         edge_thresh = st.sidebar.slider(
             t["edge_thresh_cartoon"],
             min_value=0.03,
-            max_value=0.20,
-            value=0.08,
+            max_value=0.25,
+            value=0.10,
             step=0.01,
             help=t["edge_thresh_cartoon_help"]
         )
@@ -422,14 +426,14 @@ def main():
             t["water_edge"],
             min_value=0.1,
             max_value=1.0,
-            value=0.50,
+            value=0.45,
             step=0.05
         )
         water_sat = st.sidebar.slider(
             t["water_sat"],
             min_value=1.0,
             max_value=2.0,
-            value=1.30,
+            value=1.35,
             step=0.05
         )
         bilat_d = st.sidebar.slider(t["bilat_d"], 3, 11, 7, step=2)
@@ -438,9 +442,10 @@ def main():
             t["edge_thresh_sobel"],
             min_value=0.03,
             max_value=0.35,
-            value=0.10,
+            value=0.12,
             step=0.01
         )
+        smooth_edge = st.sidebar.checkbox(t["smooth_edge"], value=True)
         invert_mask = st.sidebar.checkbox(t["invert_mask"], value=True)
 
     # Nhóm tinh chỉnh ánh sáng & độ tương phản
@@ -518,8 +523,9 @@ def main():
         )
     else:
         gray = to_grayscale(current_img)
-        _, _, mag = compute_gradients(gray)
-        raw_result = create_edge_mask(mag, threshold=edge_thresh, invert=invert_mask)
+        gray_clean = gaussian_blur(gray, size=5, sigma=1.2)
+        _, _, mag = compute_gradients(gray_clean)
+        raw_result = create_edge_mask(mag, threshold=edge_thresh, invert=invert_mask, smooth=smooth_edge)
 
     # Tinh chỉnh màu sắc và độ sáng theo thanh trượt
     result_img = apply_tone_adjustments(

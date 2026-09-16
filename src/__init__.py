@@ -6,6 +6,12 @@ Thuần NumPy - Tuyệt đối không dùng OpenCV.
 """
 
 from .cartoon import cartoonify, quantize_colors
+from .color_adjust import (
+    adjust_brightness,
+    adjust_contrast,
+    adjust_saturation,
+    apply_tone_adjustments,
+)
 from .convolution import convolve1d_axis, convolve2d, padding_2d
 from .edges import compute_gradients, create_edge_mask, get_sobel_kernels
 from .filters import (
@@ -22,12 +28,19 @@ from .io_handler import (
     to_float32,
     to_uint8,
 )
-from .sketch import color_dodge, pencil_sketch
+from .resizer import resize_bilinear, resize_max_dimension
+from .sketch import color_dodge, color_pencil_sketch, pencil_sketch
+from .watercolor import watercolor_effect
 
 __all__ = [
+    "adjust_brightness",
+    "adjust_contrast",
+    "adjust_saturation",
+    "apply_tone_adjustments",
     "bilateral_filter",
     "cartoonify",
     "color_dodge",
+    "color_pencil_sketch",
     "compute_gradients",
     "convolve1d_axis",
     "convolve2d",
@@ -41,8 +54,11 @@ __all__ = [
     "padding_2d",
     "pencil_sketch",
     "quantize_colors",
+    "resize_bilinear",
+    "resize_max_dimension",
     "save_image",
     "to_float32",
     "to_grayscale",
     "to_uint8",
+    "watercolor_effect",
 ]

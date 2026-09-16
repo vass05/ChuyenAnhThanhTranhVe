@@ -38,3 +38,17 @@ def test_pencil_sketch_shapes_and_types():
     assert sketch_u8.shape == (H, W)
     assert sketch_u8.dtype == np.uint8
     assert 0 <= sketch_u8.min() and sketch_u8.max() <= 255
+
+
+def test_color_pencil_sketch():
+    from src.sketch import color_pencil_sketch
+    H, W = 30, 30
+    rgb = np.random.rand(H, W, 3).astype(np.float32)
+    res_float = color_pencil_sketch(rgb, blur_size=7, blur_sigma=3.0, as_float=True)
+    assert res_float.shape == (H, W, 3)
+    assert res_float.dtype == np.float32
+    assert res_float.min() >= 0.0 and res_float.max() <= 1.0
+
+    res_uint8 = color_pencil_sketch(rgb, blur_size=7, blur_sigma=3.0, as_float=False)
+    assert res_uint8.shape == (H, W, 3)
+    assert res_uint8.dtype == np.uint8

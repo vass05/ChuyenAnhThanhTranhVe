@@ -1,12 +1,14 @@
 """
 Module: sketch.py
-Mô tả: Pipeline tạo hiệu ứng tranh phác thảo chì (Pencil Sketch) từ số 0 thuần NumPy.
+Mô tả: Pipeline tạo hiệu ứng tranh phác thảo chì (Pencil Sketch & Color Pencil) từ số 0 thuần NumPy.
 DoD:
 - Chuyển đổi mức xám I_gray.
 - Nghịch đảo I_inv = 255 - I_gray.
 - Gaussian Blur trên I_inv tạo bóng mờ I_blur.
 - Hòa trộn Color Dodge Blending:
     I_sketch = min(255, (I_gray * 256) / (255 - I_blur + 1))
+- Tăng cường chiều sâu than chì tự nhiên (Graphite Depth Shading).
+- Tranh chì màu (Color Pencil Sketch) đa kênh rực rỡ.
 """
 
 import numpy as np
@@ -50,7 +52,7 @@ def pencil_sketch(
         as_float: Nếu True, trả về float32 [0.0, 1.0]. Nếu False, trả về uint8 [0, 255].
         
     Trả về:
-        np.ndarray: Ma trận 2D phác thảo nét chì chân thực.
+        np.ndarray: Ma trận 2D phác thảo nét chì chân thực với chiều sâu than chì.
     """
     if not isinstance(image, np.ndarray):
         image = np.asarray(image)
@@ -59,8 +61,10 @@ def pencil_sketch(
     gray = to_grayscale(image)
     if gray.max() <= 1.0:
         gray_255 = gray.astype(np.float32) * 255.0
+        gray_norm = gray.astype(np.float32)
     else:
         gray_255 = gray.astype(np.float32)
+        gray_norm = gray.astype(np.float32) / 255.0
 
     # 2. Nghịch đảo mức xám: I_inv = 255 - I_gray
     inv_255 = 255.0 - gray_255
@@ -70,7 +74,53 @@ def pencil_sketch(
 
     # 4. Color Dodge Blending
     sketch_255 = color_dodge(gray_255, blur_255)
+    sketch_norm = sketch_255 / 255.0
+
+    # 5. Tăng cường chiều sâu than chì (Graphite Depth Shading)
+    # Giữ nền giấy trắng sạch sẽ nhưng tạo độ chuyển sắc đậm đà cho tóc, mắt, nếp gấp áo
+    depth_shading = 0.70 + 0.30 * np.power(gray_norm, 0.8)
+    final_sketch = np.clip(sketch_norm * depth_shading, 0.0, 1.0)
 
     if as_float:
-        return (sketch_255 / 255.0).astype(np.float32)
-    return np.clip(np.round(sketch_255), 0, 255).astype(np.uint8)
+        return final_sketch.astype(np.float32)
+    return np.clip(np.round(final_sketch * 255.0), 0, 255).astype(np.uint8)
+
+
+def color_pencil_sketch(
+    image: np.ndarray,
+    blur_size: int = 21,
+    blur_sigma: float = 10.0,
+    as_float: bool = True
+) -> np.ndarray:
+    """
+    Pipeline tạo tranh phác thảo chì màu nghệ thuật (Color Pencil Sketch).
+
+    Phương pháp:
+    - Tính ma trận nét vẽ phác thảo chì đơn sắc (I_sketch) từ độ sáng.
+    - Hòa trộn nét chì với ma trận màu gốc theo công thức Multiply Shading:
+        I_color_sketch = I_rgb * I_sketch
+      giúp các nét chì phủ bóng tự nhiên lên từng khối màu gốc.
+    """
+    from .color_adjust import adjust_saturation
+    from .io_handler import to_float32, to_uint8
+
+    if not isinstance(image, np.ndarray):
+        image = np.asarray(image)
+
+    # Nếu ảnh xám, trả về tranh chì thường
+    if image.ndim == 2 or (image.ndim == 3 and image.shape[2] == 1):
+        return pencil_sketch(image, blur_size=blur_size, blur_sigma=blur_sigma, as_float=as_float)
+
+    img_float = to_float32(image)
+    sketch_bw = pencil_sketch(img_float, blur_size=blur_size, blur_sigma=blur_sigma, as_float=True)
+
+    # Tăng nhẹ độ rực rỡ sắc tố cho hiệu ứng chì màu Prismacolor
+    vibrant_img = adjust_saturation(img_float, factor=1.20)
+
+    # Shading đa kênh: Nhân từng kênh màu RGB với ma trận bóng chì
+    color_sketch = vibrant_img * sketch_bw[:, :, np.newaxis]
+    color_sketch = np.clip(color_sketch, 0.0, 1.0)
+
+    if as_float:
+        return color_sketch.astype(np.float32)
+    return to_uint8(color_sketch)

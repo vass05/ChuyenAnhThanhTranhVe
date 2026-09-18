@@ -1,10 +1,4 @@
-# Chuyển Ảnh Thành Tranh Vẽ (Artistic Image Converter)
-
-> **Đồ án môn học:** Xử lý ảnh số (Chương 5)  
-> **Tác giả / Nhóm:** `vass05`  
-> **Công nghệ:** 100% Thuần **Python & NumPy** — Tuyệt đối **Zero OpenCV** (`cv2`).
-
----
+# Chuyển Ảnh Thành Tranh Vẽ (Artistic Image Convert
 
 ## Giới Thiệu Dự Án
 **Chuyển Ảnh Thành Tranh Vẽ** là ứng dụng web tương tác trực quan giúp biến đổi các bức ảnh số thông thường thành các tác phẩm tranh vẽ nghệ thuật sống động. Toàn bộ các thuật toán xử lý ảnh số nền tảng và nâng cao (tích chập 2D, bộ lọc Gauss khả tách, bộ lọc song phương Bilateral, toán tử Sobel, Color Dodge, lượng tử hóa màu...) đều được tự cài đặt từ đầu bằng đại số tuyến tính ma trận NumPy vector hóa cao độ.

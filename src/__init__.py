@@ -13,7 +13,12 @@ from .color_adjust import (
     apply_tone_adjustments,
 )
 from .convolution import convolve1d_axis, convolve2d, padding_2d
-from .edges import compute_gradients, create_edge_mask, get_sobel_kernels
+from .edges import (
+    compute_gradients,
+    continuous_line_art,
+    create_edge_mask,
+    get_sobel_kernels,
+)
 from .filters import (
     bilateral_filter,
     gaussian_blur,
@@ -42,6 +47,7 @@ __all__ = [
     "color_dodge",
     "color_pencil_sketch",
     "compute_gradients",
+    "continuous_line_art",
     "convolve1d_axis",
     "convolve2d",
     "create_edge_mask",

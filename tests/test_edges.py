@@ -58,3 +58,62 @@ def test_create_edge_mask():
     # Nền đen (0.0), nét trắng (1.0)
     mask_norm = create_edge_mask(mag, threshold=0.15, invert=False)
     np.testing.assert_allclose(mask_norm, 1.0 - mask_inv)
+
+
+def test_continuous_line_art_basic_and_shapes():
+    """Kiểm tra pipeline continuous_line_art: bảo toàn kích thước, kiểu dữ liệu và dải giá trị."""
+    from src.edges import continuous_line_art
+
+    # Kiểm tra với ảnh RGB 3 kênh
+    img_rgb = np.ones((50, 60, 3), dtype=np.float32)
+    # Vẽ một hình vuông đen ở giữa
+    img_rgb[15:35, 20:40] = 0.1
+
+    line_art_float = continuous_line_art(img_rgb, threshold=0.10, boldness=1.0, as_float=True)
+    assert line_art_float.shape == (50, 60)
+    assert line_art_float.dtype == np.float32
+    assert line_art_float.min() >= 0.0
+    assert line_art_float.max() <= 1.0
+
+    # Nền trắng (xấp xỉ 1.0), nét viền đen (nhỏ hơn 0.5)
+    assert line_art_float[0, 0] > 0.95
+    # Tại chu vi hình vuông có nét viền mực đậm
+    assert np.min(line_art_float[14:36, 19:41]) < 0.3
+
+    # Kiểm tra với đầu ra uint8
+    line_art_uint8 = continuous_line_art(img_rgb, as_float=False)
+    assert line_art_uint8.shape == (50, 60)
+    assert line_art_uint8.dtype == np.uint8
+    assert line_art_uint8.max() <= 255
+
+
+def test_continuous_line_art_color_edges():
+    """Kiểm tra khả năng bóc tách biên độ màu sắc (Color Gradient) trên kênh RGB."""
+    from src.edges import continuous_line_art
+
+    # Tạo ảnh có 2 mảng màu có cùng độ sáng nhưng khác biệt kênh màu (Đỏ vs Xanh)
+    img_color = np.zeros((40, 40, 3), dtype=np.float32)
+    img_color[:, :20] = [0.8, 0.1, 0.1]
+    img_color[:, 20:] = [0.1, 0.8, 0.1]
+
+    art = continuous_line_art(img_color, threshold=0.08, boldness=1.0, invert=True)
+    # Đường ranh giới giữa cột 19 và 20 phải có nét vẽ mực đen đậm
+    boundary_pixels = art[10:30, 18:22]
+    assert np.min(boundary_pixels) < 0.4
+
+
+def test_continuous_line_art_thickness():
+    """Kiểm tra tham số độ dày nét vẽ thickness làm tăng số lượng pixel nét vẽ."""
+    from src.edges import continuous_line_art
+
+    img = np.ones((50, 50), dtype=np.float32)
+    img[20:30, 20:30] = 0.0
+
+    art_thin = continuous_line_art(img, threshold=0.10, thickness=1, invert=True)
+    art_thick = continuous_line_art(img, threshold=0.10, thickness=2, invert=True)
+
+    dark_thin = np.sum(art_thin < 0.5)
+    dark_thick = np.sum(art_thick < 0.5)
+
+    assert dark_thick > dark_thin
+

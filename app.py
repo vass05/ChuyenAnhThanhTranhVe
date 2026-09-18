@@ -16,7 +16,7 @@ from PIL import Image
 
 from src.cartoon import cartoonify
 from src.color_adjust import apply_tone_adjustments
-from src.edges import compute_gradients, create_edge_mask
+from src.edges import compute_gradients, continuous_line_art, create_edge_mask
 from src.filters import gaussian_blur
 from src.grayscale import to_grayscale
 from src.io_handler import to_float32, to_uint8
@@ -37,7 +37,7 @@ TRANSLATIONS = {
         "style_color_pencil": "Tranh chì màu",
         "style_pencil": "Tranh phác thảo chì",
         "style_watercolor": "Tranh màu nước",
-        "style_edge": "Nét vẽ viền",
+        "style_edge": "Nét vẽ liền",
         "param_header": "Tinh chỉnh nét vẽ & màu sắc",
         "num_levels": "Số mảng màu:",
         "num_levels_help": "Số lượng mảng màu sắc. Giá trị thấp tạo mảng màu phẳng rõ rệt hơn.",
@@ -53,6 +53,12 @@ TRANSLATIONS = {
         "water_edge": "Độ đậm nét cọ viền:",
         "water_sat": "Độ rực rỡ màu nước:",
         "edge_thresh_sobel": "Ngưỡng nhận diện viền:",
+        "edge_boldness": "Độ đậm nét mực:",
+        "edge_boldness_help": "Tăng cường độ sâu mực đen thẳm, loại bỏ nét xám mờ nhạt.",
+        "edge_thickness": "Độ dày nét vẽ:",
+        "edge_thickness_help": "Độ dày pixel của nét vẽ (1: Mảnh tinh tế, 2: Vừa vặn, 3: Đậm nét).",
+        "connect_lines": "Nối liền nét vẽ đứt đoạn",
+        "connect_lines_help": "Tự động kết nối các khoảng hở 1-2 pixel để tạo nét vẽ liền mạch không bị chấm vụn.",
         "smooth_edge": "Nét vẽ khử răng cưa mượt mà",
         "invert_mask": "Nền trắng nét đen",
         "tone_header": "Độ sáng & Tương phản",
@@ -79,7 +85,7 @@ TRANSLATIONS = {
         "style_color_pencil": "Color Pencil Sketch",
         "style_pencil": "Pencil Sketch",
         "style_watercolor": "Watercolor",
-        "style_edge": "Edge Outline",
+        "style_edge": "Continuous Line Art",
         "param_header": "Stroke & Color Adjustments",
         "num_levels": "Color Levels:",
         "num_levels_help": "Number of color levels. Lower values create more distinct flat shading.",
@@ -95,6 +101,12 @@ TRANSLATIONS = {
         "water_edge": "Brush Stroke Intensity:",
         "water_sat": "Watercolor Vibrancy:",
         "edge_thresh_sobel": "Edge Threshold:",
+        "edge_boldness": "Ink Boldness / Density:",
+        "edge_boldness_help": "Enhances deep black ink depth, eliminating faint and washed-out lines.",
+        "edge_thickness": "Line Thickness:",
+        "edge_thickness_help": "Stroke width in pixels (1: Fine, 2: Medium, 3: Bold).",
+        "connect_lines": "Connect broken contours (Continuous Lines)",
+        "connect_lines_help": "Automatically bridges 1-2 pixel gaps to create continuous unbroken strokes.",
         "smooth_edge": "Smooth Anti-Aliased Lines",
         "invert_mask": "White background black ink",
         "tone_header": "Brightness & Contrast",
@@ -376,6 +388,9 @@ def main():
     blur_size = 21
     num_levels = 6
     edge_thresh = 0.10
+    edge_boldness = 1.0
+    edge_thickness = 1
+    connect_lines = True
     bilat_d = 7
     bilat_sigma_s = 7.0
     bilat_sigma_r = 0.12
@@ -391,6 +406,7 @@ def main():
             max_value=16,
             value=6,
             step=1,
+            key="slider_cartoon_levels",
             help=t["num_levels_help"]
         )
         edge_thresh = st.sidebar.slider(
@@ -399,11 +415,12 @@ def main():
             max_value=0.25,
             value=0.10,
             step=0.01,
+            key="slider_cartoon_edge",
             help=t["edge_thresh_cartoon_help"]
         )
-        bilat_d = st.sidebar.slider(t["bilat_d"], 3, 11, 7, step=2)
-        bilat_sigma_s = st.sidebar.slider(t["bilat_sigma_s"], 1.0, 15.0, 7.0, step=0.5)
-        bilat_sigma_r = st.sidebar.slider(t["bilat_sigma_r"], 0.02, 0.40, 0.12, step=0.01)
+        bilat_d = st.sidebar.slider(t["bilat_d"], 3, 11, 7, step=2, key="slider_cartoon_d")
+        bilat_sigma_s = st.sidebar.slider(t["bilat_sigma_s"], 1.0, 15.0, 7.0, step=0.5, key="slider_cartoon_sigma_s")
+        bilat_sigma_r = st.sidebar.slider(t["bilat_sigma_r"], 0.02, 0.40, 0.12, step=0.01, key="slider_cartoon_sigma_r")
     elif current_style in ("style_color_pencil", "style_pencil"):
         blur_sigma = st.sidebar.slider(
             t["blur_sigma_pencil"],
@@ -411,6 +428,7 @@ def main():
             max_value=30.0,
             value=10.0,
             step=0.5,
+            key="slider_pencil_sigma",
             help=t["blur_sigma_pencil_help"]
         )
         blur_size = st.sidebar.slider(
@@ -419,6 +437,7 @@ def main():
             max_value=45,
             value=21,
             step=2,
+            key="slider_pencil_size",
             help=t["blur_size_pencil_help"]
         )
     elif current_style == "style_watercolor":
@@ -427,26 +446,53 @@ def main():
             min_value=0.1,
             max_value=1.0,
             value=0.45,
-            step=0.05
+            step=0.05,
+            key="slider_water_edge"
         )
         water_sat = st.sidebar.slider(
             t["water_sat"],
             min_value=1.0,
             max_value=2.0,
             value=1.35,
-            step=0.05
+            step=0.05,
+            key="slider_water_sat"
         )
-        bilat_d = st.sidebar.slider(t["bilat_d"], 3, 11, 7, step=2)
+        bilat_d = st.sidebar.slider(t["bilat_d"], 3, 11, 7, step=2, key="slider_water_d")
     else:
         edge_thresh = st.sidebar.slider(
             t["edge_thresh_sobel"],
             min_value=0.03,
             max_value=0.35,
-            value=0.12,
-            step=0.01
+            value=0.10,
+            step=0.01,
+            key="slider_edge_thresh"
         )
-        smooth_edge = st.sidebar.checkbox(t["smooth_edge"], value=True)
-        invert_mask = st.sidebar.checkbox(t["invert_mask"], value=True)
+        edge_boldness = st.sidebar.slider(
+            t["edge_boldness"],
+            min_value=0.5,
+            max_value=2.0,
+            value=1.0,
+            step=0.05,
+            key="slider_edge_boldness",
+            help=t["edge_boldness_help"]
+        )
+        edge_thickness = st.sidebar.slider(
+            t["edge_thickness"],
+            min_value=1,
+            max_value=3,
+            value=1,
+            step=1,
+            key="slider_edge_thickness",
+            help=t["edge_thickness_help"]
+        )
+        connect_lines = st.sidebar.checkbox(
+            t["connect_lines"],
+            value=True,
+            key="chk_connect_lines",
+            help=t["connect_lines_help"]
+        )
+        smooth_edge = st.sidebar.checkbox(t["smooth_edge"], value=True, key="chk_smooth_edge")
+        invert_mask = st.sidebar.checkbox(t["invert_mask"], value=True, key="chk_invert_mask")
 
     # Nhóm tinh chỉnh ánh sáng & độ tương phản
     st.sidebar.markdown("---")
@@ -476,13 +522,28 @@ def main():
         key="slider_saturation"
     )
 
-    # Khu vực tải ảnh chính diện
+    # Khu vực tải ảnh chính diện với key cố định tránh mất trạng thái khi đổi ngôn ngữ
     uploaded = st.file_uploader(
         t["uploader_label"],
-        type=["png", "jpg", "jpeg", "bmp", "dcm"]
+        type=["png", "jpg", "jpeg", "bmp", "dcm"],
+        key="app_main_file_uploader"
     )
 
-    if uploaded is None:
+    # Lưu và quản lý ảnh trong session_state để chuyển đổi ngôn ngữ không bị mất ảnh
+    if uploaded is not None:
+        file_sig = f"{uploaded.name}_{uploaded.size}"
+        if st.session_state.get("cached_file_sig") != file_sig:
+            parsed_img, parsed_name = parse_uploaded_file(uploaded)
+            st.session_state["cached_img"] = parsed_img
+            st.session_state["cached_fname"] = parsed_name
+            st.session_state["cached_file_sig"] = file_sig
+    else:
+        # Nếu người dùng bấm xóa ảnh trên widget
+        st.session_state.pop("cached_img", None)
+        st.session_state.pop("cached_fname", None)
+        st.session_state.pop("cached_file_sig", None)
+
+    if "cached_img" not in st.session_state or st.session_state["cached_img"] is None:
         st.markdown(f"""
         <div class="card-box">
             <div style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; color: #0369A1;">{t["no_image_title"]}</div>
@@ -491,8 +552,9 @@ def main():
         """, unsafe_allow_html=True)
         return
 
-    # Nạp ảnh gốc 100%
-    current_img, filename = parse_uploaded_file(uploaded)
+    # Nạp ảnh gốc 100% từ session_state
+    current_img = st.session_state["cached_img"]
+    filename = st.session_state["cached_fname"]
     orig_h, orig_w = current_img.shape[:2]
     num_channels = current_img.shape[2] if current_img.ndim == 3 else 1
 
@@ -522,10 +584,16 @@ def main():
             as_float=True
         )
     else:
-        gray = to_grayscale(current_img)
-        gray_clean = gaussian_blur(gray, size=5, sigma=1.2)
-        _, _, mag = compute_gradients(gray_clean)
-        raw_result = create_edge_mask(mag, threshold=edge_thresh, invert=invert_mask, smooth=smooth_edge)
+        raw_result = continuous_line_art(
+            current_img,
+            threshold=edge_thresh,
+            boldness=edge_boldness,
+            thickness=edge_thickness,
+            connect_lines=connect_lines,
+            smooth=smooth_edge,
+            invert=invert_mask,
+            as_float=True
+        )
 
     # Tinh chỉnh màu sắc và độ sáng theo thanh trượt
     result_img = apply_tone_adjustments(

@@ -537,11 +537,26 @@ def main():
             st.session_state["cached_img"] = parsed_img
             st.session_state["cached_fname"] = parsed_name
             st.session_state["cached_file_sig"] = file_sig
+            st.session_state["cached_img_uint8"] = to_uint8(parsed_img)
+            # Xóa các tầng cache cũ khi người dùng nạp ảnh mới
+            st.session_state.pop("cached_raw_result", None)
+            st.session_state.pop("cached_result_img", None)
+            st.session_state.pop("cached_byte_im", None)
+            st.session_state.pop("last_style_cache_key", None)
+            st.session_state.pop("last_full_cache_key", None)
+            st.session_state.pop("last_png_cache_key", None)
     else:
         # Nếu người dùng bấm xóa ảnh trên widget
         st.session_state.pop("cached_img", None)
         st.session_state.pop("cached_fname", None)
         st.session_state.pop("cached_file_sig", None)
+        st.session_state.pop("cached_img_uint8", None)
+        st.session_state.pop("cached_raw_result", None)
+        st.session_state.pop("cached_result_img", None)
+        st.session_state.pop("cached_byte_im", None)
+        st.session_state.pop("last_style_cache_key", None)
+        st.session_state.pop("last_full_cache_key", None)
+        st.session_state.pop("last_png_cache_key", None)
 
     if "cached_img" not in st.session_state or st.session_state["cached_img"] is None:
         st.markdown(f"""
@@ -557,68 +572,99 @@ def main():
     filename = st.session_state["cached_fname"]
     orig_h, orig_w = current_img.shape[:2]
     num_channels = current_img.shape[2] if current_img.ndim == 3 else 1
+    file_sig = st.session_state["cached_file_sig"]
 
-    # Thực thi thuật toán chuyển đổi ảnh nghệ thuật
-    t_start = time.perf_counter()
-
+    # 1. Trích xuất khóa định danh tham số phong cách vẽ
     if current_style == "style_color_pencil":
-        raw_result = color_pencil_sketch(current_img, blur_size=blur_size, blur_sigma=blur_sigma, as_float=True)
+        style_params = (blur_size, blur_sigma)
     elif current_style == "style_pencil":
-        raw_result = pencil_sketch(current_img, blur_size=blur_size, blur_sigma=blur_sigma, as_float=True)
+        style_params = (blur_size, blur_sigma)
     elif current_style == "style_cartoon":
-        raw_result = cartoonify(
-            current_img,
-            num_levels=num_levels,
-            d=bilat_d,
-            sigma_s=bilat_sigma_s,
-            sigma_r=bilat_sigma_r,
-            edge_threshold=edge_thresh,
-            as_float=True
-        )
+        style_params = (num_levels, bilat_d, bilat_sigma_s, bilat_sigma_r, edge_thresh)
     elif current_style == "style_watercolor":
-        raw_result = watercolor_effect(
-            current_img,
-            bilat_d=bilat_d,
-            edge_strength=water_edge_str,
-            saturation_boost=water_sat,
-            as_float=True
-        )
+        style_params = (water_edge_str, water_sat, bilat_d)
     else:
-        raw_result = continuous_line_art(
-            current_img,
-            threshold=edge_thresh,
-            boldness=edge_boldness,
-            thickness=edge_thickness,
-            connect_lines=connect_lines,
-            smooth=smooth_edge,
-            invert=invert_mask,
-            as_float=True
+        style_params = (edge_thresh, edge_boldness, edge_thickness, connect_lines, smooth_edge, invert_mask)
+
+    style_cache_key = (file_sig, current_style, style_params)
+
+    # 2. Bộ nhớ đệm Tầng 1 (Style Filter Cache):
+    # Nếu phong cách và thông số vẽ không đổi (ví dụ: chuyển ngôn ngữ, chuyển tab hoặc chỉnh độ sáng),
+    # dùng ngay kết quả đã tính toán mà không cần chạy lại bộ lọc nặng (0ms tức thì).
+    t_start = time.perf_counter()
+    if (
+        st.session_state.get("last_style_cache_key") == style_cache_key
+        and "cached_raw_result" in st.session_state
+    ):
+        raw_result = st.session_state["cached_raw_result"]
+        render_time_ms = st.session_state.get("cached_render_time_ms", 0.0)
+    else:
+        if current_style == "style_color_pencil":
+            raw_result = color_pencil_sketch(current_img, blur_size=blur_size, blur_sigma=blur_sigma, as_float=True)
+        elif current_style == "style_pencil":
+            raw_result = pencil_sketch(current_img, blur_size=blur_size, blur_sigma=blur_sigma, as_float=True)
+        elif current_style == "style_cartoon":
+            raw_result = cartoonify(
+                current_img,
+                num_levels=num_levels,
+                d=bilat_d,
+                sigma_s=bilat_sigma_s,
+                sigma_r=bilat_sigma_r,
+                edge_threshold=edge_thresh,
+                as_float=True
+            )
+        elif current_style == "style_watercolor":
+            raw_result = watercolor_effect(
+                current_img,
+                bilat_d=bilat_d,
+                edge_strength=water_edge_str,
+                saturation_boost=water_sat,
+                as_float=True
+            )
+        else:
+            raw_result = continuous_line_art(
+                current_img,
+                threshold=edge_thresh,
+                boldness=edge_boldness,
+                thickness=edge_thickness,
+                connect_lines=connect_lines,
+                smooth=smooth_edge,
+                invert=invert_mask,
+                as_float=True
+            )
+
+        render_time_ms = (time.perf_counter() - t_start) * 1000
+        st.session_state["cached_raw_result"] = raw_result
+        st.session_state["last_style_cache_key"] = style_cache_key
+        st.session_state["cached_render_time_ms"] = render_time_ms
+
+    # 3. Bộ nhớ đệm Tầng 2 (Tone Adjustments Cache):
+    tone_params = (bright_val, contrast_val, sat_val)
+    full_cache_key = (style_cache_key, tone_params)
+
+    if (
+        st.session_state.get("last_full_cache_key") == full_cache_key
+        and "cached_result_img" in st.session_state
+    ):
+        result_img = st.session_state["cached_result_img"]
+    else:
+        result_img = apply_tone_adjustments(
+            raw_result,
+            brightness=bright_val,
+            contrast=contrast_val,
+            saturation=sat_val
         )
+        st.session_state["cached_result_img"] = result_img
+        st.session_state["last_full_cache_key"] = full_cache_key
 
-    # Tinh chỉnh màu sắc và độ sáng theo thanh trượt
-    result_img = apply_tone_adjustments(
-        raw_result,
-        brightness=bright_val,
-        contrast=contrast_val,
-        saturation=sat_val
-    )
-
-    render_time_ms = (time.perf_counter() - t_start) * 1000
-
-    # Layout song song 2 cột: Cột trái "Ảnh gốc", Cột phải "Kết quả"
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown(f'<div class="section-title"><span class="dot-origin"></span> {t["original_title"]}</div>', unsafe_allow_html=True)
-        st.caption(t["file_info"].format(filename, orig_w, orig_h, num_channels))
-        st.image(to_uint8(current_img), use_container_width=True)
-
-    with col2:
-        st.markdown(f'<div class="section-title"><span class="dot-result"></span> {t["result_title"]}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="metric-badge">{t["time_metric"].format(render_time_ms)}</div>', unsafe_allow_html=True)
-        st.image(to_uint8(result_img), use_container_width=True)
-
-        # Chuyển ảnh ra buffer PNG chất lượng cao
+    # 4. Bộ nhớ đệm Tầng 3 (PNG Download Buffer Cache):
+    # Loại bỏ triệt để việc nén lại file PNG 50MB (mất 1.7 giây) trên mỗi lần thao tác/chuyển màn hình
+    if (
+        st.session_state.get("last_png_cache_key") == full_cache_key
+        and "cached_byte_im" in st.session_state
+    ):
+        byte_im = st.session_state["cached_byte_im"]
+    else:
         out_uint8 = to_uint8(result_img)
         if out_uint8.ndim == 2:
             pil_export = Image.fromarray(out_uint8, mode="L")
@@ -628,6 +674,21 @@ def main():
         buf = io.BytesIO()
         pil_export.save(buf, format="PNG")
         byte_im = buf.getvalue()
+        st.session_state["cached_byte_im"] = byte_im
+        st.session_state["last_png_cache_key"] = full_cache_key
+
+    # Layout song song 2 cột: Cột trái "Ảnh gốc", Cột phải "Kết quả"
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(f'<div class="section-title"><span class="dot-origin"></span> {t["original_title"]}</div>', unsafe_allow_html=True)
+        st.caption(t["file_info"].format(filename, orig_w, orig_h, num_channels))
+        st.image(st.session_state.get("cached_img_uint8", to_uint8(current_img)), use_container_width=True)
+
+    with col2:
+        st.markdown(f'<div class="section-title"><span class="dot-result"></span> {t["result_title"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-badge">{t["time_metric"].format(render_time_ms)}</div>', unsafe_allow_html=True)
+        st.image(to_uint8(result_img), use_container_width=True)
 
         # Nút tải ảnh về máy
         st.download_button(

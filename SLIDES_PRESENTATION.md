@@ -66,16 +66,17 @@
 
 ---
 
-### SLIDE 7: HƯỚNG DẪN CHẠY PHẦN MỀM
+### SLIDE 7: HƯỚNG DẪN CHẠY PHẦN MỀM & KIỂM THỬ
 1. **Khởi chạy Giao diện Ứng dụng (GUI Web App):**
    ```bash
    streamlit run app.py
    ```
-   $\rightarrow$ Trình duyệt tự động mở giao diện tương tác Side-by-Side: kéo thả ảnh, điều chỉnh thanh trượt thời gian thực và tải ảnh tranh vẽ về máy.
-2. **Chạy dòng lệnh nhanh (CLI Runner):**
+   $\rightarrow$ Trình duyệt tự động mở giao diện tương tác Side-by-Side: kéo thả ảnh, chuyển đổi 5 phong cách tranh nghệ thuật, tinh chỉnh thông số thời gian thực và tải ảnh tranh vẽ về máy.
+2. **Kiểm thử tự động toàn diện (Automated Testing):**
    ```bash
-   python run_sprint2.py --input <duong_dan_anh>
+   pytest -v
    ```
+   $\rightarrow$ Thực thi toàn bộ 40/40 bài kiểm thử Unit Test bảo đảm tính toàn vẹn và độ chính xác toán học của các giải thuật.
 
 ---
 

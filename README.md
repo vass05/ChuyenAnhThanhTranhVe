@@ -1,4 +1,4 @@
-# 🎨 Chuyển Ảnh Thành Tranh Vẽ (Artistic Image Converter)
+# Chuyển Ảnh Thành Tranh Vẽ (Artistic Image Converter)
 
 > **Đồ án môn học:** Xử lý ảnh số (Chương 5)  
 > **Tác giả / Nhóm:** `vass05`  
@@ -6,29 +6,29 @@
 
 ---
 
-## 🌟 Giới Thiệu Dự Án
+## Giới Thiệu Dự Án
 **Chuyển Ảnh Thành Tranh Vẽ** là ứng dụng web tương tác trực quan giúp biến đổi các bức ảnh số thông thường thành các tác phẩm tranh vẽ nghệ thuật sống động. Toàn bộ các thuật toán xử lý ảnh số nền tảng và nâng cao (tích chập 2D, bộ lọc Gauss khả tách, bộ lọc song phương Bilateral, toán tử Sobel, Color Dodge, lượng tử hóa màu...) đều được tự cài đặt từ đầu bằng đại số tuyến tính ma trận NumPy vector hóa cao độ.
 
 ---
 
-## 🎨 5 Phong Cách Tranh Nghệ Thuật
-1. **🎭 Tranh Hoạt Hình (Cartoonify / Anime):** 
+## 5 Phong Cách Tranh Nghệ Thuật
+1. **Tranh Hoạt Hình (Cartoonify / Anime):** 
    - Làm phẳng khối màu bằng 2 lượt Bilateral Filter bảo toàn cạnh biên sắc nét.
    - Lượng tử hóa màu cel-shading bảo toàn sắc thái da người kết hợp hiệu ứng Anime Highlight Bloom.
-2. **✏️ Tranh Phác Thảo Chì (Pencil Sketch):**
+2. **Tranh Phác Thảo Chì (Pencil Sketch):**
    - Multi-scale Color Dodge Blending bóc tách nét phác thảo thanh mảnh và bóng mờ than chì 4B-6B.
    - Tích hợp phủ bóng than chì tự nhiên và vi cấu trúc vân giấy ký họa (Paper Tooth Grain).
-3. **🖍️ Tranh Chì Màu (Color Pencil Sketch):**
+3. **Tranh Chì Màu (Color Pencil Sketch):**
    - Hòa trộn trừ sắc tố sáp màu trên mặt giấy trắng, giữ nguyên độ rực rỡ của cảnh vật.
-4. **🌊 Tranh Màu Nước (Watercolor):**
+4. **Tranh Màu Nước (Watercolor):**
    - Làm mịn loang màu nước mềm mại, tăng cường độ bão hòa sắc tố kết hợp viền cọ màu nước.
-5. **✒️ Nét Vẽ Liền (Continuous Line Art):**
+5. **Nét Vẽ Liền (Continuous Line Art):**
    - Trích xuất biên độ đa kênh RGB kết hợp khung hướng dẫn đa tỷ lệ (Multi-scale Guidance) bắt trọn cằm, mắt, mũi và dáng người.
    - Thuật toán đóng hình thái học (Morphological Closing) tự động hàn gắn nét đứt đoạn, tạo đường nét liền mạch sâu thẳm.
 
 ---
 
-## ⚡ Điểm Sáng Kỹ Thuật
+## Điểm Sáng Kỹ Thuật
 - **Zero OpenCV:** Không sử dụng thư viện `cv2`, toàn bộ tính toán đều viết bằng toán học ma trận NumPy.
 - **Tối ưu hóa Vector hóa SIMD:** Không dùng vòng lặp pixel $O(H \times W)$, tốc độ xử lý chỉ trong vài chục mili-giây.
 - **Hỗ trợ ảnh Đa Nguồn:** Đọc ảnh số thông thường (JPG, PNG, BMP) và cả **ảnh y tế CT Scan lồng ngực DICOM 16-bit (`.dcm`)**.
@@ -36,12 +36,12 @@
   - Hỗ trợ song ngữ **Tiếng Việt - Tiếng Anh**.
   - So sánh trực quan Side-by-Side (Ảnh gốc vs Kết quả).
   - Tinh chỉnh thông số thời gian thực (độ sáng, tương phản, độ tươi màu, độ đậm nét).
-  - Không bị mất ảnh hay reset thông số khi chuyển đổi ngôn ngữ.
+  - Không bị mất ảnh hay reset thông số khi chuyển đổi ngôn ngữ hoặc chuyển màn hình.
   - Tải tranh vẽ chất lượng cao về máy (PNG).
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt & Khởi Chạy
+## Hướng Dẫn Cài Đặt & Khởi Chạy
 
 ### 1. Cài đặt môi trường & thư viện
 Yêu cầu **Python 3.10+**. Cài đặt các gói phụ thuộc cần thiết:
@@ -63,7 +63,7 @@ pytest -v
 
 ---
 
-## 📂 Cấu Trúc Thư Mục Dự Án
+## Cấu Trúc Thư Mục Dự Án
 ```text
 ChuyenAnhThanhTranhVe/
 │── app.py                   # Ứng dụng Web Streamlit chính diện (GUI)

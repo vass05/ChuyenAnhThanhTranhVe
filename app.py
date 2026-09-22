@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 import pydicom
 import streamlit as st
-from PIL import Image
+from PIL import Image, ImageOps
 
 from src.cartoon import cartoonify
 from src.color_adjust import apply_tone_adjustments
@@ -73,7 +73,9 @@ TRANSLATIONS = {
         "time_metric": "Thời gian xử lý: {:.1f}ms",
         "file_info": "Tệp: {} | {}x{} điểm ảnh | {} kênh",
         "download_button": "Tải ảnh về máy",
-        "file_download_name": "tranh_ve_nghe_thuat.png"
+        "file_download_name": "tranh_ve_nghe_thuat.png",
+        "rotate_left": "Xoay trái 90°",
+        "rotate_right": "Xoay phải 90°"
     },
     "en": {
         "app_title": "Image to Art Converter",
@@ -121,7 +123,9 @@ TRANSLATIONS = {
         "time_metric": "Processing time: {:.1f}ms",
         "file_info": "File: {} | {}x{} px | {} channels",
         "download_button": "Download Image",
-        "file_download_name": "artistic_painting.png"
+        "file_download_name": "artistic_painting.png",
+        "rotate_left": "Rotate Left 90°",
+        "rotate_right": "Rotate Right 90°"
     }
 }
 
@@ -308,8 +312,13 @@ def parse_uploaded_file(uploaded_file) -> tuple[np.ndarray, str]:
         img_float = to_float32(pixel_array)
         return img_float, uploaded_file.name
     else:
-        # Xử lý ảnh thường qua PIL
+        # Xử lý ảnh thường qua PIL (tự động điều chỉnh góc xoay EXIF của điện thoại)
         pil_img = Image.open(io.BytesIO(file_bytes))
+        try:
+            pil_img = ImageOps.exif_transpose(pil_img)
+        except Exception:
+            pass
+
         if pil_img.mode == "RGBA":
             rgb_img = Image.new("RGB", pil_img.size, (255, 255, 255))
             rgb_img.paste(pil_img, mask=pil_img.split()[3])
@@ -538,6 +547,7 @@ def main():
             st.session_state["cached_fname"] = parsed_name
             st.session_state["cached_file_sig"] = file_sig
             st.session_state["cached_img_uint8"] = to_uint8(parsed_img)
+            st.session_state["rotation_count"] = 0
             # Xóa các tầng cache cũ khi người dùng nạp ảnh mới
             st.session_state.pop("cached_raw_result", None)
             st.session_state.pop("cached_result_img", None)
@@ -551,6 +561,7 @@ def main():
         st.session_state.pop("cached_fname", None)
         st.session_state.pop("cached_file_sig", None)
         st.session_state.pop("cached_img_uint8", None)
+        st.session_state.pop("rotation_count", None)
         st.session_state.pop("cached_raw_result", None)
         st.session_state.pop("cached_result_img", None)
         st.session_state.pop("cached_byte_im", None)
@@ -567,12 +578,41 @@ def main():
         """, unsafe_allow_html=True)
         return
 
+    # Công cụ xoay ảnh thủ công (phòng trường hợp người dùng muốn đổi góc xoay)
+    rot_c1, rot_c2, _ = st.columns([1, 1, 2])
+    with rot_c1:
+        if st.button("⟲ " + t["rotate_left"], key="btn_rot_left", use_container_width=True):
+            st.session_state["cached_img"] = np.ascontiguousarray(np.rot90(st.session_state["cached_img"], k=1))
+            st.session_state["cached_img_uint8"] = to_uint8(st.session_state["cached_img"])
+            st.session_state["rotation_count"] = st.session_state.get("rotation_count", 0) + 1
+            st.session_state.pop("cached_raw_result", None)
+            st.session_state.pop("cached_result_img", None)
+            st.session_state.pop("cached_byte_im", None)
+            st.session_state.pop("last_style_cache_key", None)
+            st.session_state.pop("last_full_cache_key", None)
+            st.session_state.pop("last_png_cache_key", None)
+            st.rerun()
+
+    with rot_c2:
+        if st.button("⟳ " + t["rotate_right"], key="btn_rot_right", use_container_width=True):
+            st.session_state["cached_img"] = np.ascontiguousarray(np.rot90(st.session_state["cached_img"], k=-1))
+            st.session_state["cached_img_uint8"] = to_uint8(st.session_state["cached_img"])
+            st.session_state["rotation_count"] = st.session_state.get("rotation_count", 0) + 1
+            st.session_state.pop("cached_raw_result", None)
+            st.session_state.pop("cached_result_img", None)
+            st.session_state.pop("cached_byte_im", None)
+            st.session_state.pop("last_style_cache_key", None)
+            st.session_state.pop("last_full_cache_key", None)
+            st.session_state.pop("last_png_cache_key", None)
+            st.rerun()
+
     # Nạp ảnh gốc 100% từ session_state
     current_img = st.session_state["cached_img"]
     filename = st.session_state["cached_fname"]
     orig_h, orig_w = current_img.shape[:2]
     num_channels = current_img.shape[2] if current_img.ndim == 3 else 1
-    file_sig = st.session_state["cached_file_sig"]
+    rot_c = st.session_state.get("rotation_count", 0)
+    file_sig = f"{st.session_state['cached_file_sig']}_rot_{rot_c}"
 
     # 1. Trích xuất khóa định danh tham số phong cách vẽ
     if current_style == "style_color_pencil":

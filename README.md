@@ -54,7 +54,7 @@ streamlit run app.py
 Trình duyệt sẽ tự động mở giao diện tại địa chỉ: `http://localhost:8501`.
 
 ### 3. Chạy kiểm thử tự động (Unit Tests)
-Dự án được bảo đảm chất lượng với **40/40 Unit Tests PASS 100%**:
+Dự án được bảo đảm chất lượng với **41/41 Unit Tests PASS 100%**:
 ```bash
 pytest -v
 ```

@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+from PIL import Image
 from pydicom.dataset import FileDataset, FileMetaDataset
 from pydicom.uid import CTImageStorage, ExplicitVRLittleEndian, generate_uid
 
@@ -116,3 +117,19 @@ def test_load_dicom_file():
         assert dcm_matrix.dtype == np.float32
         assert dcm_matrix.min() >= 0.0
         assert dcm_matrix.max() <= 1.0
+
+
+def test_load_image_exif_orientation():
+    """Kiểm tra load_image tự động chuẩn hóa góc xoay theo EXIF Orientation của điện thoại."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Tạo ảnh giả định hướng ngang (width=100, height=50)
+        img = Image.new("RGB", (100, 50), color="blue")
+        exif = img.getexif()
+        # Tag EXIF 0x0112 = 6 (Rotate 90 CW - điện thoại chụp dọc)
+        exif[0x0112] = 6
+        file_path = Path(tmpdir) / "test_phone_photo.jpg"
+        img.save(file_path, exif=exif)
+
+        # Khi nạp qua load_image, ảnh phải được tự động xoay đứng thành (height=100, width=50)
+        loaded = load_image(file_path, as_float=False)
+        assert loaded.shape == (100, 50, 3)

@@ -76,7 +76,7 @@
    ```bash
    pytest -v
    ```
-   $\rightarrow$ Thực thi toàn bộ 40/40 bài kiểm thử Unit Test bảo đảm tính toàn vẹn và độ chính xác toán học của các giải thuật.
+   $\rightarrow$ Thực thi toàn bộ 41/41 bài kiểm thử Unit Test bảo đảm tính toàn vẹn và độ chính xác toán học của các giải thuật.
 
 ---
 

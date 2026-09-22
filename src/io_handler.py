@@ -7,7 +7,7 @@ DoD: Thuần NumPy và PIL/pydicom, tuyệt đối không dùng OpenCV.
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 try:
     import pydicom
@@ -103,6 +103,11 @@ def load_image(file_path: str | Path, as_float: bool = True) -> np.ndarray:
         raise FileNotFoundError(f"Không tìm thấy file ảnh: {file_path}")
 
     with Image.open(path) as img:
+        try:
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
+
         # Nếu là ảnh RGBA, chuyển sang RGB nếu không cần alpha
         if img.mode == "RGBA":
             # Tạo background trắng và dán RGBA lên

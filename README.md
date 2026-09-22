@@ -3,7 +3,7 @@
 > **Đồ án môn học:** Xử lý ảnh số (Chương 5)  
 > **Tác giả / Nhóm:** `vass05`  
 > **Công nghệ:** 100% Thuần **Python & NumPy** — Tuyệt đối **Zero OpenCV** (`cv2`).  
-> **Trải nghiệm trực tuyến (Live Demo):** 🚀 [chuyenanhthanhtranhve.streamlit.app](https://chuyenanhthanhtranhve.streamlit.app/)
+> **Trải nghiệm trực tuyến (Live Demo):**  [chuyenanhthanhtranhve.streamlit.app](https://chuyenanhthanhtranhve.streamlit.app/)
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://chuyenanhthanhtranhve.streamlit.app/)
 

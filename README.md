@@ -2,7 +2,10 @@
 
 > **Đồ án môn học:** Xử lý ảnh số (Chương 5)  
 > **Tác giả / Nhóm:** `vass05`  
-> **Công nghệ:** 100% Thuần **Python & NumPy** — Tuyệt đối **Zero OpenCV** (`cv2`).
+> **Công nghệ:** 100% Thuần **Python & NumPy** — Tuyệt đối **Zero OpenCV** (`cv2`).  
+> **Trải nghiệm trực tuyến (Live Demo):** 🚀 [chuyenanhthanhtranhve.streamlit.app](https://chuyenanhthanhtranhve.streamlit.app/)
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://chuyenanhthanhtranhve.streamlit.app/)
 
 **Chuyển Ảnh Thành Tranh Vẽ** là ứng dụng web tương tác trực quan giúp biến đổi các bức ảnh số thông thường thành các tác phẩm tranh vẽ nghệ thuật sống động. Toàn bộ các thuật toán xử lý ảnh số nền tảng và nâng cao (tích chập 2D, bộ lọc Gauss khả tách, bộ lọc song phương Bilateral, toán tử Sobel, Color Dodge, lượng tử hóa màu...) đều được tự cài đặt từ đầu bằng đại số tuyến tính ma trận NumPy vector hóa cao độ.
 
@@ -63,6 +66,8 @@ pytest -v
 
 ## Hướng Dẫn Triển Khai (Streamlit Community Cloud)
 
+> 🌐 **Ứng dụng đã được triển khai trực tiếp tại:** [https://chuyenanhthanhtranhve.streamlit.app/](https://chuyenanhthanhtranhve.streamlit.app/)
+
 Dự án được cấu hình sẵn sàng để triển khai trực tuyến hoàn toàn miễn phí trên **Streamlit Community Cloud**:
 1. Đăng nhập vào [share.streamlit.io](https://share.streamlit.io) bằng tài khoản GitHub của bạn.
 2. Nhấn nút **"Create app"** (hoặc **"New app"**).
@@ -70,7 +75,7 @@ Dự án được cấu hình sẵn sàng để triển khai trực tuyến hoà
    - **Repository:** `vass05/ChuyenAnhThanhTranhVe`
    - **Branch:** `main`
    - **Main file path:** `app.py`
-   - *(Tùy chọn)* Đặt tên miền đẹp theo ý muốn trong phần **App URL** (ví dụ: `chuyen-anh-thanh-tranh-ve.streamlit.app`).
+   - **App URL:** `chuyenanhthanhtranhve.streamlit.app`
 4. Nhấn **"Deploy!"** — Hệ thống sẽ tự động cài đặt các thư viện từ `requirements.txt` và cung cấp đường link truy cập trực tuyến với chứng chỉ bảo mật HTTPS.
 
 ---

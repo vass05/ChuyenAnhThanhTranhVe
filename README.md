@@ -1,6 +1,9 @@
-# Chuyển Ảnh Thành Tranh Vẽ (Artistic Image Convert
+# Chuyển Ảnh Thành Tranh Vẽ (Artistic Image Converter)
 
-## Giới Thiệu Dự Án
+> **Đồ án môn học:** Xử lý ảnh số (Chương 5)  
+> **Tác giả / Nhóm:** `vass05`  
+> **Công nghệ:** 100% Thuần **Python & NumPy** — Tuyệt đối **Zero OpenCV** (`cv2`).
+
 **Chuyển Ảnh Thành Tranh Vẽ** là ứng dụng web tương tác trực quan giúp biến đổi các bức ảnh số thông thường thành các tác phẩm tranh vẽ nghệ thuật sống động. Toàn bộ các thuật toán xử lý ảnh số nền tảng và nâng cao (tích chập 2D, bộ lọc Gauss khả tách, bộ lọc song phương Bilateral, toán tử Sobel, Color Dodge, lượng tử hóa màu...) đều được tự cài đặt từ đầu bằng đại số tuyến tính ma trận NumPy vector hóa cao độ.
 
 ---
@@ -40,8 +43,9 @@
 ### 1. Cài đặt môi trường & thư viện
 Yêu cầu **Python 3.10+**. Cài đặt các gói phụ thuộc cần thiết:
 ```bash
-pip install numpy pillow streamlit pydicom pytest
+pip install -r requirements.txt
 ```
+*(Nếu muốn chạy kiểm thử unit tests, cài thêm `pytest`: `pip install pytest`)*
 
 ### 2. Khởi chạy Ứng dụng Web
 ```bash
@@ -57,14 +61,45 @@ pytest -v
 
 ---
 
+## Hướng Dẫn Triển Khai (Deployment)
+
+### 1. Triển khai lên Streamlit Community Cloud (Khuyên dùng - Miễn phí 100%)
+Dự án được cấu hình sẵn sàng cho [Streamlit Community Cloud](https://share.streamlit.io):
+1. Đăng nhập vào [share.streamlit.io](https://share.streamlit.io) bằng tài khoản GitHub của bạn.
+2. Nhấn nút **"Create app"** (hoặc **"New app"**).
+3. Điền các trường thông tin:
+   - **Repository:** `vass05/ChuyenAnhThanhTranhVe` (hoặc repo của bạn)
+   - **Branch:** `main`
+   - **Main file path:** `app.py`
+   - *(Tùy chọn)* Đặt tên miền đẹp theo ý muốn trong phần **App URL** (ví dụ: `chuyen-anh-thanh-tranh-ve.streamlit.app`).
+4. Nhấn **"Deploy!"** — Hệ thống sẽ tự động cài đặt `requirements.txt` và cung cấp đường link truy cập trực tuyến với chứng chỉ HTTPS miễn phí.
+
+### 2. Triển khai bằng Docker (Tự host / VPS / Server nội bộ)
+Dự án đã tích hợp sẵn [Dockerfile](file:///d:/K%C3%AC%201%20N4/X%E1%BB%AD%20l%C3%BD%20%E1%BA%A3nh/ChuyenAnhThanhTranhVe/Dockerfile) tối ưu hóa kích thước dựa trên `python:3.11-slim`:
+
+```bash
+# 1. Build image Docker
+docker build -t image-to-art:latest .
+
+# 2. Khởi chạy container
+docker run -d -p 8501:8501 --name art-studio image-to-art:latest
+```
+Truy cập giao diện tại `http://localhost:8501` hoặc địa chỉ IP máy chủ.
+
+---
+
 ## Cấu Trúc Thư Mục Dự Án
 ```text
 ChuyenAnhThanhTranhVe/
 │── app.py                   # Ứng dụng Web Streamlit chính diện (GUI)
+│── requirements.txt         # Khai báo các thư viện phụ thuộc
+│── Dockerfile               # Tệp đóng gói Docker container tối ưu
 │── DOCS_ALGORITHMS.md       # Tài liệu toán học & giải thuật chi tiết
 │── SLIDES_PRESENTATION.md   # Slide báo cáo nghiệm thu đồ án
 │── README.md                # Giới thiệu tổng quan dự án
 │
+├── .streamlit/              # Cấu hình giao diện và server Streamlit
+│   └── config.toml
 ├── src/                     # Động cơ thuật toán thuần NumPy
 │   ├── __init__.py          # Export các hàm xử lý công khai
 │   ├── io_handler.py        # Đọc/ghi ảnh PIL & ảnh y tế DICOM

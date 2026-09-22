@@ -61,30 +61,17 @@ pytest -v
 
 ---
 
-## Hướng Dẫn Triển Khai (Deployment)
+## Hướng Dẫn Triển Khai (Streamlit Community Cloud)
 
-### 1. Triển khai lên Streamlit Community Cloud (Khuyên dùng - Miễn phí 100%)
-Dự án được cấu hình sẵn sàng cho [Streamlit Community Cloud](https://share.streamlit.io):
+Dự án được cấu hình sẵn sàng để triển khai trực tuyến hoàn toàn miễn phí trên **Streamlit Community Cloud**:
 1. Đăng nhập vào [share.streamlit.io](https://share.streamlit.io) bằng tài khoản GitHub của bạn.
 2. Nhấn nút **"Create app"** (hoặc **"New app"**).
 3. Điền các trường thông tin:
-   - **Repository:** `vass05/ChuyenAnhThanhTranhVe` (hoặc repo của bạn)
+   - **Repository:** `vass05/ChuyenAnhThanhTranhVe`
    - **Branch:** `main`
    - **Main file path:** `app.py`
    - *(Tùy chọn)* Đặt tên miền đẹp theo ý muốn trong phần **App URL** (ví dụ: `chuyen-anh-thanh-tranh-ve.streamlit.app`).
-4. Nhấn **"Deploy!"** — Hệ thống sẽ tự động cài đặt `requirements.txt` và cung cấp đường link truy cập trực tuyến với chứng chỉ HTTPS miễn phí.
-
-### 2. Triển khai bằng Docker (Tự host / VPS / Server nội bộ)
-Dự án đã tích hợp sẵn [Dockerfile](file:///d:/K%C3%AC%201%20N4/X%E1%BB%AD%20l%C3%BD%20%E1%BA%A3nh/ChuyenAnhThanhTranhVe/Dockerfile) tối ưu hóa kích thước dựa trên `python:3.11-slim`:
-
-```bash
-# 1. Build image Docker
-docker build -t image-to-art:latest .
-
-# 2. Khởi chạy container
-docker run -d -p 8501:8501 --name art-studio image-to-art:latest
-```
-Truy cập giao diện tại `http://localhost:8501` hoặc địa chỉ IP máy chủ.
+4. Nhấn **"Deploy!"** — Hệ thống sẽ tự động cài đặt các thư viện từ `requirements.txt` và cung cấp đường link truy cập trực tuyến với chứng chỉ bảo mật HTTPS.
 
 ---
 
@@ -93,7 +80,6 @@ Truy cập giao diện tại `http://localhost:8501` hoặc địa chỉ IP máy
 ChuyenAnhThanhTranhVe/
 │── app.py                   # Ứng dụng Web Streamlit chính diện (GUI)
 │── requirements.txt         # Khai báo các thư viện phụ thuộc
-│── Dockerfile               # Tệp đóng gói Docker container tối ưu
 │── DOCS_ALGORITHMS.md       # Tài liệu toán học & giải thuật chi tiết
 │── SLIDES_PRESENTATION.md   # Slide báo cáo nghiệm thu đồ án
 │── README.md                # Giới thiệu tổng quan dự án
